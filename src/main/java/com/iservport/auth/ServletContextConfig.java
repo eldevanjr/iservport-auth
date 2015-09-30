@@ -39,9 +39,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import freemarker.template.TemplateException;
 
 /**
- * Configuracao Java.
+ * Configuração Java.
  * 
  * @author Eldevan Nery Junior
+ * @author mauriciofernandesdecastro
+ * 
  */
 @Configuration
 @EnableTransactionManagement
