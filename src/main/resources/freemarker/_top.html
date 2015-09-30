@@ -1,0 +1,188 @@
+<header class="top-header clearfix" >
+    <!-- Logo -->
+    <div class="logo bg-dark-light" data-ng-include="'/assets/_brand.html'" ></div>
+    <!-- needs to be put after logo to make it work -->
+    <div class="menu-button" data-toggle-off-canvas >
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+    </div>
+
+    <div class="top-nav" >
+
+    <ul class="nav-left list-unstyled">
+        <li>
+            <a href="#/" data-toggle-nav-collapsed-min
+                         class="toggle-min"
+                         ><i class="fa fa-bars"></i></a>
+        </li>            
+        
+		<li><a href="/root"><i data-href="/api/entity" data-authorized-entity></i></a></li>
+		
+		<!--
+		 ! Formulário de pesquisa.
+		 !-->
+        <li class="visible-md visible-lg">
+			<form id="searchForm" data-ng-submit="search(searchForm)" class="navbar-form navbar-right">    
+			<div class="input-group input-group-sm">
+				<input type="text" class="form-control"  placeholder="Pesquisar" size="32"  id="searchString" name="searchString" data-ng-model="searchForm.searchString">
+				<span class="input-group-btn">
+					<button value="inst" type="submit" class="btn btn-default inst"><i class="glyphicon glyphicon-search" data-tooltip-placement="left" data-tooltip="Pesquisar itens"></i></button>
+				</span>
+			</div>
+			<div class="alert alert-success col-sm-12" id="searchMsg" style="display: none;"  role="alert"> {{'NO_RESULT'}}</div>
+			</form>	
+        </li>
+        
+        <!-- 
+         ! Email dropdown
+         !
+        <li class="dropdown">
+            <a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown">
+                <i class="ti-email"></i>
+                <span class="badge badge-danger">3</span>
+            </a>
+            <div class="dropdown-menu with-arrow panel panel-default">
+                <div class="panel-heading">
+                    You have 3 mails.
+                </div>
+                <ul class="list-group">
+                    <li class="list-group-item">
+                        <a href="javascript:;" class="media">
+                            <span class="media-left media-icon">
+                                <span class="btn-icon btn-icon-round btn-warning"><i class="ti-email"></i></span>
+                            </span>
+                            <div class="media-body">
+                                <span class="block">Lisa sent you a mail</span>
+                                <span class="text-muted block">2min ago</span>
+                            </div>
+                        </a>
+                    </li>
+                </ul>
+                <div class="panel-footer">
+                    <a href="#/mail/inbox">Show all mails.</a>
+                </div>
+            </div>
+        </li> -->
+        <!-- 
+         ! Notification dropdown
+         !
+        <li class="dropdown">
+            <a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown">
+                <i class="ti-bell"></i>
+                <span class="badge badge-info">3</span>
+            </a>
+            <div class="dropdown-menu with-arrow panel panel-default">
+                <div class="panel-heading">
+                    You have 3 notifications.
+                </div>
+                <ul class="list-group">
+                    <li class="list-group-item">
+                        <a href="javascript:;" class="media">
+                            <span class="media-left media-icon">
+                                <span class="btn-icon btn-icon-round btn-success"><i class="ti-bell"></i></span>
+                            </span>
+                            <div class="media-body">
+                                <span class="block">New tasks needs to be done</span>
+                                <span class="text-muted block">2min ago</span>
+                            </div>
+                        </a>
+                    </li>
+                </ul>
+                <div class="panel-footer">
+                    <a href="#/mail/inbox">Show all notifications.</a>
+                </div>
+            </div>
+        </li>  -->      
+    </ul> 
+
+    <ul class="nav-right pull-right list-unstyled">    
+    	
+        <li class="dropdown text-normal nav-profile">
+            <a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-authorized-user ></a>
+            <ul class="dropdown-menu with-arrow pull-right">
+                <li>
+                    <a href="#/pages/profile">
+                        <i class="ti-user"></i>
+                        <span >My Profile</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#/tasks/tasks">
+                        <i class="ti-check-box"></i>
+                        <span ></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#/pages/lock-screen">
+                        <i class="ti-lock"></i>
+                        <span ></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#/pages/signin">
+                        <i class="ti-export"></i>
+                        <span></span>
+                    </a>
+                </li>
+            </ul>
+        </li>
+        
+        <li class="dropdown hidden-xs">
+	        <a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-gear"></i></a>
+	        <div class="dropdown-menu with-arrow panel panel-default admin-options" data-ui-not-close-on-click>
+	            <div class="panel-heading"> Ajustes </div>
+	            <ul class="list-group">
+	            	 <li class="list-group-item">
+	                    <a href="/recovery/self">Mudar senha?</a>
+	                    <label class="ui-radio"><input name="layout" type="radio" value="boxed" data-ng-model="admin.layout"><span>Diminuir</span></label>
+	                    <label class="ui-radio"><input name="layout" type="radio" value="wide" data-ng-model="admin.layout"><span>Aumentar</span></label>
+	                </li>
+	                <li class="list-group-item">
+	                    <p>Estilo do Layolt</p>
+	                    <label class="ui-radio"><input name="layout" type="radio" value="boxed" data-ng-model="admin.layout"><span>Diminuir</span></label>
+	                    <label class="ui-radio"><input name="layout" type="radio" value="wide" data-ng-model="admin.layout"><span>Aumentar</span></label>
+	                </li>
+	                <li class="list-group-item">
+	                    <p>Estilo do Menu</p>
+	                    <label class="ui-radio"><input name="menu" type="radio" value="vertical" data-ng-model="admin.menu"><span>Vertical</span></label>
+	                    <label class="ui-radio"><input name="menu" type="radio" value="horizontal" data-ng-model="admin.menu"><span>Horizontal</span></label>
+	                </li>
+	                <li class="list-group-item">
+	                    <p>Adicional</p>
+	                    <label class="ui-checkbox"><input name="checkbox1" type="checkbox" value="option1" data-ng-model="admin.fixedHeader"><span>Cabeçalho fixo</span></label>
+	                    <br>
+	                    <label class="ui-checkbox"><input name="checkbox1" type="checkbox" value="option1" data-ng-model="admin.fixedSidebar"><span>Menu fixo</span></label>
+	                </li>
+	                <li class="list-group-item">
+	                    <p>
+	                        <span>Página de Transição: </span>
+	                        <span class="space"></span>
+	                        <select data-ng-model="admin.pageTransition"
+	                                data-ng-options="ageTransitionOpt.name for ageTransitionOpt in pageTransitionOpts"></select>
+	                    </p>
+	                </li>
+	            </ul>
+	        </div>
+	    </li>
+	    <li>
+	        <a href="/logout">
+	            <i class="ti-export"></i>
+	            <span>Sair <i class="fa fa-sign-out"></i>
+	            </span>
+	        </a>
+	    </li>
+		<!-- logout seguro 
+		<form action="/logout" method="post" id="logoutForm">
+			<input type="hidden" name="${_csrf.parameterName}"
+				value="${_csrf.token}" />
+		</form>
+		<script>
+			function formSubmit() {
+				document.getElementById("logoutForm").submit();
+			}
+		</script>-->	
+    </ul>
+	</div><!-- top-nav -->
+	
+</header>
