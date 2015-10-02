@@ -6,6 +6,8 @@ import javax.naming.NamingException;
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 
+import org.helianto.core.config.HeliantoServiceConfig;
+import org.helianto.sendgrid.config.SendGridConfig;
 import org.hibernate.ejb.HibernatePersistence;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -22,7 +24,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
@@ -36,14 +37,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * Basic Java configuration.
  * 
  * @author mauriciofernandesdecastro
+ * @author Eldevan Nery Junior
+ * 
  */
 @Configuration
 @EnableWebMvc
-@Import({SecurityWebConfig.class, OAuthConfiguration.class})
-//@ComponentScan(
-//	basePackages = {
-//		"org.helianto.*.controller"
-//})
+@Import({SecurityWebConfig.class, OAuthConfiguration.class, HeliantoServiceConfig.class, SendGridConfig.class})
+@ComponentScan(
+	basePackages = {
+		"com.iservport.*.controller"
+})
 @EnableJpaRepositories(
     basePackages={"org.helianto.*.repository"})
 public abstract class RootContextConfig extends WebMvcConfigurerAdapter {
@@ -65,7 +68,6 @@ public abstract class RootContextConfig extends WebMvcConfigurerAdapter {
 	public EntityManagerFactory entityManagerFactory() {
 		HibernateJpaVendorAdapter vendor = new HibernateJpaVendorAdapter();
 		vendor.setGenerateDdl(env.getProperty("helianto.sql.generateDdl", Boolean.class, Boolean.TRUE));
-
 		LocalContainerEntityManagerFactoryBean bean = new LocalContainerEntityManagerFactoryBean();
 		bean.setDataSource(dataSource());
 		bean.setPackagesToScan(getPacakgesToScan());
@@ -84,7 +86,6 @@ public abstract class RootContextConfig extends WebMvcConfigurerAdapter {
 	@Bean
 	public DataSource dataSource() throws IllegalArgumentException {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
-        
         dataSource.setDriverClassName(env.getRequiredProperty("helianto.db.driver"));
         dataSource.setUrl(env.getRequiredProperty("helianto.db.url"));
         dataSource.setUsername(env.getRequiredProperty("helianto.db.username"));
@@ -92,6 +93,7 @@ public abstract class RootContextConfig extends WebMvcConfigurerAdapter {
          
         return dataSource;
 	}
+	
 	@Bean
 	public PasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder();
