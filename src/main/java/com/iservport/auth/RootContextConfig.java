@@ -2,20 +2,20 @@
 package com.iservport.auth;
 
 import javax.inject.Inject;
-import javax.naming.NamingException;
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 
 import org.helianto.core.config.HeliantoServiceConfig;
 import org.helianto.sendgrid.config.SendGridConfig;
 import org.hibernate.ejb.HibernatePersistence;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.Environment;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.security.authentication.encoding.Md5PasswordEncoder;
@@ -32,6 +32,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mchange.v2.c3p0.ComboPooledDataSource;
 
 /**
  * Basic Java configuration.
@@ -51,6 +52,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
     basePackages={"org.helianto.*.repository"})
 public abstract class RootContextConfig extends WebMvcConfigurerAdapter {
 	
+	private static final Logger logger = LoggerFactory.getLogger(RootContextConfig.class);
+	
 	@Inject
 	protected Environment env;
 	
@@ -68,8 +71,11 @@ public abstract class RootContextConfig extends WebMvcConfigurerAdapter {
 	public EntityManagerFactory entityManagerFactory() {
 		HibernateJpaVendorAdapter vendor = new HibernateJpaVendorAdapter();
 		vendor.setGenerateDdl(env.getProperty("helianto.sql.generateDdl", Boolean.class, Boolean.TRUE));
+		vendor.setDatabasePlatform(env.getProperty("helianto.jdbc.dialect", "org.hibernate.dialect.HSQLDialect"));
+		DataSource dataSource = dataSource();
+		logger.info("Creating entity manager from {}", dataSource);
 		LocalContainerEntityManagerFactoryBean bean = new LocalContainerEntityManagerFactoryBean();
-		bean.setDataSource(dataSource());
+		bean.setDataSource(dataSource);
 		bean.setPackagesToScan(getPacakgesToScan());
 		bean.setJpaVendorAdapter(vendor);
 		bean.setPersistenceProvider(new HibernatePersistence());
@@ -78,21 +84,27 @@ public abstract class RootContextConfig extends WebMvcConfigurerAdapter {
 	}
 	
 	/**
-	 * Simple data source.
-	 * 
-	 * @throws NamingException 
-	 * @throws IllegalArgumentException 
+	 * Data source.
 	 */
 	@Bean
-	public DataSource dataSource() throws IllegalArgumentException {
-        DriverManagerDataSource dataSource = new DriverManagerDataSource();
-        dataSource.setDriverClassName(env.getRequiredProperty("helianto.db.driver"));
-        dataSource.setUrl(env.getRequiredProperty("helianto.db.url"));
-        dataSource.setUsername(env.getRequiredProperty("helianto.db.username"));
-        dataSource.setPassword(env.getRequiredProperty("helianto.db.password"));
-         
-        return dataSource;
+	public DataSource dataSource() {
+		try {
+			ComboPooledDataSource ds = new ComboPooledDataSource();
+			ds.setDriverClass(env.getProperty("helianto.jdbc.driverClassName", "org.hsqldb.jdbcDriver"));
+			ds.setJdbcUrl(env.getProperty("helianto.jdbc.url", "jdbc:hsqldb:file:target/testdb/db2;shutdown=true"));
+			ds.setUser(env.getProperty("helianto.jdbc.username", "sa"));
+			ds.setPassword(env.getProperty("helianto.jdbc.password", ""));
+			ds.setAcquireIncrement(5);
+			ds.setIdleConnectionTestPeriod(60);
+			ds.setMaxPoolSize(100);
+			ds.setMaxStatements(50);
+			ds.setMinPoolSize(10);
+			return ds;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
+
 	
 	@Bean
 	public PasswordEncoder passwordEncoder() {

@@ -78,6 +78,7 @@ public class OAuthConfiguration  extends AuthorizationServerConfigurerAdapter{
 		.authorizedGrantTypes("password", "authorization_code", "refresh_token", "implicit")
 		.authorities("ROLE_USER")
 		.scopes("read", "write", "trust")
+		.secret("secret")
 		.accessTokenValiditySeconds(60)
 		.and()
 		.withClient("helianto-trusted-client-with-secret")
