@@ -1,210 +1,116 @@
 package com.iservport.auth;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.text.ParseException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Locale;
-import java.util.Properties;
 
 import javax.inject.Inject;
+import javax.sql.DataSource;
 
-import org.helianto.security.resolver.CurrentUserHandlerMethodArgumentResolver;
+import org.hibernate.ejb.HibernatePersistence;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.orm.jpa.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
-import org.springframework.format.Formatter;
-import org.springframework.format.FormatterRegistry;
-import org.springframework.http.MediaType;
-import org.springframework.http.converter.ByteArrayHttpMessageConverter;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.StringHttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.core.env.Environment;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
-import org.springframework.web.method.support.HandlerMethodArgumentResolver;
-import org.springframework.web.multipart.commons.CommonsMultipartResolver;
 import org.springframework.web.servlet.LocaleResolver;
-import org.springframework.web.servlet.ViewResolver;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
-import org.springframework.web.servlet.view.ContentNegotiatingViewResolver;
-import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
-import org.springframework.web.servlet.view.freemarker.FreeMarkerViewResolver;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import freemarker.template.TemplateException;
+import com.mchange.v2.c3p0.ComboPooledDataSource;
 
 /**
- * Configuração Java.
+ * Configuracao Java para Spring boot.
  * 
  * @author Eldevan Nery Junior
- * @author mauriciofernandesdecastro
- * 
+ *
  */
 @Configuration
+@SpringBootApplication 
+@EnableAutoConfiguration
 @EnableTransactionManagement
-@Import({ RootContextConfig.class})
-public class ServletContextConfig  extends WebMvcConfigurerAdapter{
+@Import({ RootContextConfig.class, SecurityWebConfig.class, OAuthConfiguration.class
+//		, CassandraConfig.class
+	})
+@EntityScan(basePackages={"org.helianto.*.domain", "com.iservport.*.domain"})
+public class ServletContextConfig extends WebMvcConfigurerAdapter {
 
-
-	public static final MediaType APPLICATION_JSON_UTF8 = new MediaType(MediaType.APPLICATION_JSON.getType(), MediaType.APPLICATION_JSON.getSubtype(), Charset.forName("utf8"));
-
-	@Inject
-	private ObjectMapper mapper;
-
-	@Bean 
-	public CurrentUserHandlerMethodArgumentResolver currentUserHandlerMethodArgumentResolver() {
-		return new CurrentUserHandlerMethodArgumentResolver();
+	public static void main(String[] args) {
+		SpringApplication.run(ServletContextConfig.class, args);
 	}
+	
+	/**
+	 * Override to set packages to scan.
+	 */
+	protected String[] getPacakgesToScan() {
+		return new String[] {"org.helianto.*.domain", "com.iservport.*.domain"};
+	}
+	
+	@Inject
+	private Environment env;
 	
 	/**
 	 * Força locale para pt_BR.
 	 */
 	@Bean(name = "localeResolver")
-	 public LocaleResolver sessionLocaleResolver(){
-	     SessionLocaleResolver localeResolver=new SessionLocaleResolver();
-	     localeResolver.setDefaultLocale(new Locale("pt_BR"));
-	     return localeResolver;
-	 }  
-
+	public LocaleResolver sessionLocaleResolver(){
+		SessionLocaleResolver localeResolver=new SessionLocaleResolver();
+		localeResolver.setDefaultLocale(new Locale("pt_BR"));
+		return localeResolver;
+	}  
+	
 	/**
-	 * Argument resolvers.
+	 * Entity manager factory.
 	 */
-	@Override
-	public void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
-		argumentResolvers.addAll(
-				Arrays.asList(
-						currentUserHandlerMethodArgumentResolver()
-						)
-				);
+	@SuppressWarnings("deprecation")
+	@Bean 
+	public  LocalContainerEntityManagerFactoryBean entityManagerFactory() {
+		HibernateJpaVendorAdapter vendor = new HibernateJpaVendorAdapter();
+		vendor.setGenerateDdl(env.getProperty("helianto.sql.generateDdl", Boolean.class, Boolean.TRUE));
+		vendor.setDatabasePlatform(env.getProperty("helianto.jdbc.dialect", "org.hibernate.dialect.HSQLDialect"));
+		LocalContainerEntityManagerFactoryBean bean = new LocalContainerEntityManagerFactoryBean();
+		bean.setDataSource(dataSource());
+		bean.setPackagesToScan(getPacakgesToScan());
+		bean.setJpaVendorAdapter(vendor);
+		bean.setPersistenceProvider(new HibernatePersistence());
+		bean.afterPropertiesSet();
+        return bean;
+	}
+	
+	@Bean
+	public PlatformTransactionManager transactionManager() {
+	  JpaTransactionManager txManager = new JpaTransactionManager();
+	  txManager.setEntityManagerFactory(entityManagerFactory().getObject());
+	  return txManager;
 	}
 	
 	/**
-	 * Static resources.
-	 */
-	@Override
-	public void addResourceHandlers(ResourceHandlerRegistry registry) {
-		registry.addResourceHandler("/webjars/**").addResourceLocations("/webjars/");
-        registry.addResourceHandler("/css/**").addResourceLocations("classpath:/META-INF/css/").setCachePeriod(31556926);
-        registry.addResourceHandler("/fonts/**").addResourceLocations("classpath:/META-INF/fonts/").setCachePeriod(31556926);
-        registry.addResourceHandler("/images/**").addResourceLocations("classpath:/META-INF/images/").setCachePeriod(31556926);
-        registry.addResourceHandler("/js/**").addResourceLocations("classpath:/META-INF/js/").setCachePeriod(31556926);
-        registry.addResourceHandler("/assets/**").addResourceLocations("classpath:/assets/").setCachePeriod(31556926);
-        registry.addResourceHandler("/views/**").addResourceLocations("classpath:/views/").setCachePeriod(31556926);
-	}	       
-
-	/**
-	 * Freemarker configurer.
-	 * 
-	 * @throws TemplateException 
-	 * @throws IOException 
+	 * Data source.
 	 */
 	@Bean
-	public FreeMarkerConfigurer freeMarkerConfigurer() {
-		FreeMarkerConfigurer configurer = new FreeMarkerConfigurer();
-		configurer.setPreferFileSystemAccess(false);
-		configurer.setTemplateLoaderPaths(
-				new String[] {"/WEB-INF/classes/freemarker/"
-						,"/WEB-INF/freemarker/"
-						,"classpath:/freemarker/"} );
-		Properties props = new Properties();
-		props.put("default_encoding", "utf-8");
-		props.put("number_format", "computer");
-		props.put("whitespace_stripping", "true");
-		configurer.setFreemarkerSettings(props);
-		return configurer;
-	}
-
-	/**
-	 * Freemarker view resolver.
-	 */
-	public ViewResolver freeMarkerViewResolver() {
-		FreeMarkerViewResolver resolver = new FreeMarkerViewResolver();
-		resolver.setExposeSpringMacroHelpers(true);
-		resolver.setCache(true);
-		resolver.setPrefix("");
-		resolver.setSuffix(".ftl");
-		resolver.setContentType("text/html;charset=iso-8859-1");
-		return resolver;
-	}
-
-	@Bean
-	public ViewResolver viewResolver() {
-		ContentNegotiatingViewResolver resolver = new ContentNegotiatingViewResolver();
-		resolver.setViewResolvers(Arrays.asList(freeMarkerViewResolver()));
-		return resolver;
-	}
-
-	@Bean
-	public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
-		return new PropertySourcesPlaceholderConfigurer();
-	}
-
-	/**
-	 * Formatters.
-	 */
-	@Override
-	public void addFormatters(FormatterRegistry registry) {
-		registry.addFormatter(new StringFormatter());
-		super.addFormatters(registry);
-
-	}
-
-	public class StringFormatter implements Formatter<String>{
-		@Override
-		public String print(String object, Locale locale) {
-			return object;
-		}
-
-		@Override
-		public String parse(String text, Locale locale) throws ParseException {
-			return new String(text);
+	public DataSource dataSource() {
+		try {
+			ComboPooledDataSource ds = new ComboPooledDataSource();
+			ds.setDriverClass(env.getProperty("helianto.jdbc.driverClassName", "org.hsqldb.jdbcDriver"));
+			ds.setJdbcUrl(env.getProperty("helianto.jdbc.url", "jdbc:hsqldb:file:target/testdb/db2;shutdown=true"));
+			ds.setUser(env.getProperty("helianto.jdbc.username", "sa"));
+			ds.setPassword(env.getProperty("helianto.jdbc.password", ""));
+			ds.setAcquireIncrement(5);
+			ds.setIdleConnectionTestPeriod(60);
+			ds.setMaxPoolSize(100);
+			ds.setMaxStatements(50);
+			ds.setMinPoolSize(10);
+			return ds;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 	}
 
-	/**
-	 * Jackson json converter.
-	 */
-	@Bean
-	public MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter() {
-		MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
-		converter.setObjectMapper(mapper);
-		converter.setSupportedMediaTypes(Arrays.asList(MediaType.APPLICATION_JSON,APPLICATION_JSON_UTF8));
-		return converter;
-	}
 
-	@Override
-	public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
-		//para converter String direto pra json
-		StringHttpMessageConverter stringConverter = new StringHttpMessageConverter(
-				Charset.forName("UTF-8"));
-		stringConverter.setSupportedMediaTypes(Arrays.asList( //
-				MediaType.TEXT_PLAIN, //
-				MediaType.TEXT_HTML, //
-				MediaType.APPLICATION_JSON));
-		//Converter byte[] para imagem
-		ByteArrayHttpMessageConverter arrayHttpMessageConverter = new ByteArrayHttpMessageConverter();
-		arrayHttpMessageConverter.setSupportedMediaTypes(Arrays.asList(MediaType.IMAGE_JPEG
-				, MediaType.IMAGE_PNG
-				, MediaType.IMAGE_GIF));
-
-		converters.add(arrayHttpMessageConverter);
-		converters.add(stringConverter);
-		converters.add(mappingJackson2HttpMessageConverter());
-		super.configureMessageConverters(converters);
-	}
-
-	/**
-	 * Commons multipart resolver.
-	 */
-	@Bean
-	public CommonsMultipartResolver multipartResolver() {
-		CommonsMultipartResolver resolver = new CommonsMultipartResolver();
-		resolver.setMaxUploadSize(10000000);
-		return resolver;
-	}
 }

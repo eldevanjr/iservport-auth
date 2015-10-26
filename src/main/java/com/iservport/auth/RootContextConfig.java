@@ -1,110 +1,84 @@
 
 package com.iservport.auth;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Properties;
+
 import javax.inject.Inject;
-import javax.persistence.EntityManagerFactory;
-import javax.sql.DataSource;
 
 import org.helianto.core.config.HeliantoServiceConfig;
+import org.helianto.security.resolver.CurrentUserHandlerMethodArgumentResolver;
 import org.helianto.sendgrid.config.SendGridConfig;
-import org.hibernate.ejb.HibernatePersistence;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
-import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.security.authentication.encoding.Md5PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.ui.freemarker.FreeMarkerConfigurationFactory;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.LocaleResolver;
+import org.springframework.web.servlet.ViewResolver;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
+import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
+import org.springframework.web.servlet.view.freemarker.FreeMarkerViewResolver;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser.Feature;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mchange.v2.c3p0.ComboPooledDataSource;
+import freemarker.template.TemplateException;
 
 /**
- * Basic Java configuration.
+ * Basic Java configuration to Spring-boot.
  * 
- * @author mauriciofernandesdecastro
  * @author Eldevan Nery Junior
- * 
+ *
  */
 @Configuration
 @EnableWebMvc
-@Import({SecurityWebConfig.class, OAuthConfiguration.class, HeliantoServiceConfig.class, SendGridConfig.class})
+@Import({HeliantoServiceConfig.class, SendGridConfig.class})
 @ComponentScan(
-	basePackages = {
-		"com.iservport.*.controller"
-})
+		basePackages = {
+				"org.helianto.*.sender"
+				, "com.iservport.*.repository"
+				, "com.iservport.*.service"
+				, "com.iservport.*.controller"
+				, "org.helianto.*.controller"
+				, "org.helianto.*.repository"
+				, "com.iservport.*.sender"
+		})
 @EnableJpaRepositories(
-    basePackages={"org.helianto.*.repository"})
-public abstract class RootContextConfig extends WebMvcConfigurerAdapter {
-	
-	private static final Logger logger = LoggerFactory.getLogger(RootContextConfig.class);
-	
+		basePackages={"org.helianto.*.repository", "com.iservport.*.repository"})
+@PropertySource(value = { "classpath:META-INF/app.properties" })
+public abstract class RootContextConfig  extends WebMvcConfigurerAdapter{
+
 	@Inject
 	protected Environment env;
-	
-	/**
-	 * Override to set packages to scan.
-	 */
-	protected String[] getPacakgesToScan() {
-		return new String[] {"org.helianto.*.domain", "com.iservport.*.domain"};
-	}
-	
-	/**
-	 * Entity manager factory.
-	 */
+
 	@Bean 
-	public EntityManagerFactory entityManagerFactory() {
-		HibernateJpaVendorAdapter vendor = new HibernateJpaVendorAdapter();
-		vendor.setGenerateDdl(env.getProperty("helianto.sql.generateDdl", Boolean.class, Boolean.TRUE));
-		vendor.setDatabasePlatform(env.getProperty("helianto.jdbc.dialect", "org.hibernate.dialect.HSQLDialect"));
-		DataSource dataSource = dataSource();
-		logger.info("Creating entity manager from {}", dataSource);
-		LocalContainerEntityManagerFactoryBean bean = new LocalContainerEntityManagerFactoryBean();
-		bean.setDataSource(dataSource);
-		bean.setPackagesToScan(getPacakgesToScan());
-		bean.setJpaVendorAdapter(vendor);
-		bean.setPersistenceProvider(new HibernatePersistence());
-		bean.afterPropertiesSet();
-        return bean.getObject();
-	}
-	
-	/**
-	 * Data source.
-	 */
-	@Bean
-	public DataSource dataSource() {
-		try {
-			ComboPooledDataSource ds = new ComboPooledDataSource();
-			ds.setDriverClass(env.getProperty("helianto.jdbc.driverClassName", "org.hsqldb.jdbcDriver"));
-			ds.setJdbcUrl(env.getProperty("helianto.jdbc.url", "jdbc:hsqldb:file:target/testdb/db2;shutdown=true"));
-			ds.setUser(env.getProperty("helianto.jdbc.username", "sa"));
-			ds.setPassword(env.getProperty("helianto.jdbc.password", ""));
-			ds.setAcquireIncrement(5);
-			ds.setIdleConnectionTestPeriod(60);
-			ds.setMaxPoolSize(100);
-			ds.setMaxStatements(50);
-			ds.setMinPoolSize(10);
-			return ds;
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+	public CurrentUserHandlerMethodArgumentResolver currentUserHandlerMethodArgumentResolver() {
+		return new CurrentUserHandlerMethodArgumentResolver();
 	}
 
+	/**
+	 * Registro de resolução de argumentos.
+	 */
+	@Override
+	public void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
+		argumentResolvers.addAll(
+			Arrays.asList(
+					currentUserHandlerMethodArgumentResolver()
+			)
+		);
+	}
 	
 	@Bean
 	public PasswordEncoder passwordEncoder() {
@@ -112,17 +86,50 @@ public abstract class RootContextConfig extends WebMvcConfigurerAdapter {
 	}
 
 	/**
-	 * Jackson mapper.
-	 * 
-	 * Configured to allow comments on JSON files and to disable fail if class 
-	 * doens't contains a property.
+	 * Para direcionamento de recursos estáticos.
 	 */
+	@Override
+	public void addResourceHandlers(ResourceHandlerRegistry registry) {
+		if (!registry.hasMappingForPattern("/webjars/**")) {
+			registry.addResourceHandler("/webjars/**").addResourceLocations(
+					"classpath:/META-INF/resources/webjars/");
+		}
+        registry.addResourceHandler("/css/**").addResourceLocations("classpath:/META-INF/css/").setCachePeriod(31556926);
+        registry.addResourceHandler("/fonts/**").addResourceLocations("classpath:/META-INF/fonts/").setCachePeriod(31556926);
+        registry.addResourceHandler("/images/**").addResourceLocations("classpath:/META-INF/images/").setCachePeriod(31556926);
+        registry.addResourceHandler("/js/**").addResourceLocations("classpath:/META-INF/js/").setCachePeriod(31556926);
+        registry.addResourceHandler("/assets/**").addResourceLocations("classpath:/assets/").setCachePeriod(31556926);
+        registry.addResourceHandler("/views/**").addResourceLocations("classpath:/views/").setCachePeriod(31556926);
+	}	                        
+	
 	@Bean
-	public ObjectMapper mapper(){
-		JsonFactory factory = new JsonFactory().configure(Feature.ALLOW_COMMENTS, true);
-		ObjectMapper mapper =  new ObjectMapper(factory);
-		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-		return mapper;
+	public ViewResolver viewResolver() {
+		FreeMarkerViewResolver resolver = new FreeMarkerViewResolver();
+		resolver.setExposeSpringMacroHelpers(true);
+		resolver.setCache(true);
+		resolver.setPrefix("");
+		resolver.setSuffix(".ftl");
+		resolver.setContentType("text/html;charset=UTF-8");
+		return resolver;
+	}
+
+	@Bean
+	public FreeMarkerConfigurer freemarkerConfig() throws IOException, TemplateException {
+		FreeMarkerConfigurationFactory factory = new FreeMarkerConfigurationFactory();
+		factory.setPreferFileSystemAccess(false);
+		factory.setTemplateLoaderPaths(
+				new String[] {"/WEB-INF/classes/freemarker/"
+						,"/WEB-INF/freemarker/"
+						,"classpath:/freemarker/"} );
+		Properties props = new Properties();
+		props.put("default_encoding", "utf-8");
+		props.put("number_format", "computer");
+		props.put("whitespace_stripping", "true");
+		factory.setFreemarkerSettings(props);
+		factory.setDefaultEncoding("UTF-8");
+		FreeMarkerConfigurer result = new FreeMarkerConfigurer();
+		result.setConfiguration(factory.createConfiguration());
+		return result;
 	}
 	
 	/**
