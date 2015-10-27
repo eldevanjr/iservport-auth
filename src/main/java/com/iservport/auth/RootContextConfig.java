@@ -44,7 +44,7 @@ import freemarker.template.TemplateException;
  */
 @Configuration
 @EnableWebMvc
-@Import({HeliantoServiceConfig.class, SendGridConfig.class})
+@Import({HeliantoServiceConfig.class})
 @ComponentScan(
 		basePackages = {
 				"org.helianto.*.sender"
