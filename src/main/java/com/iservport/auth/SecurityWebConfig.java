@@ -24,6 +24,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -43,53 +44,47 @@ import org.springframework.security.web.authentication.rememberme.JdbcTokenRepos
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
-
 /**
- * Spring Security Configuration.
+ * Spring Security Configuration to OAuth Server.
  * 
- * @author mauriciofernandesdecastro
+ * @author Eldevan Nery Junior
+ * 
  */
+@Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
-//@PropertySource({"classpath:META-INF/cripto.properties"})
-public class SecurityWebConfig 
-	extends WebSecurityConfigurerAdapter
-{
-	
+public class SecurityWebConfig extends WebSecurityConfigurerAdapter {
+
 	private int REMEMBER_ME_DEFAULT_DURATION = 14*24*60*60; // duas semanas
 
 	@Inject
+	private Environment env;
+
+	@Inject
 	private DataSource dataSource;
-	
+
 	@Inject
 	private PasswordEncoder passwordEncoder;
-		
+
 	@Inject
 	private UserDetailsService userDetailsService;
-	
+
 	@Inject
 	private AuthenticationFailureHandler authenticationFailureHandler;
-	
-	@Inject
-	private Environment env;
-	
-    @Override
-    public void configure(WebSecurity web) throws Exception {
-        web
-			//Spring Security ignores request to static resources such as CSS or JS files.
-			.ignoring()
-		    .antMatchers("/webjars/**")
-		    .antMatchers("/css/**")
-		    .antMatchers("/fonts/**")
-		    .antMatchers("/images/**")
-		    .antMatchers("/js/**")
-	    	.antMatchers("/ng/**")
-	    	.antMatchers("/redactor/**")
-	    	.antMatchers("/locales/**")
-	    	.antMatchers("/favicon.png")
-	    	.antMatchers("/app/status");
-    }
-    
+
+	@Override
+	public void configure(WebSecurity web) throws Exception {
+		web
+		//Spring Security ignores request to static resources such as CSS or JS files.
+		.ignoring()
+		.antMatchers("/webjars/**","/css/**","/fonts/**","/images/**","/js/**")
+		.antMatchers("/ng/**")
+		.antMatchers("/redactor/**")
+		.antMatchers("/locales/**")
+		.antMatchers("/favicon.png")
+		.antMatchers("/app/status");
+	}
+
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
 		http
@@ -186,5 +181,6 @@ public class SecurityWebConfig
 	public TextEncryptor textEncryptor() {
 		return Encryptors.queryableText(env.getProperty("security.encryptPassword", "password"), env.getProperty("security.encryptSalt", "00"));
 	}
+
 
 }
